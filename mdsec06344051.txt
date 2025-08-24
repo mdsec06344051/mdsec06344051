@@ -1,0 +1,111 @@
+ProGuard (düz Java) – Parametre Açıklamaları
+
+Girdi/Çıktı
+
+-injars app.jar → İşlenecek JAR(lar).
+
+-outjars app-obf.jar → Üretilen obfuscate edilmiş JAR.
+
+-libraryjars <path> → JDK kütüphaneleri (JDK8: rt.jar, JDK11+: jmods/java.base.jmod). Sınıf çözümlemesi için şart.
+
+Shrink/Optimize/Obfuscate çekirdeği
+
+-dontskipnonpubliclibraryclasses / -dontskipnonpubliclibraryclassmembers → Kütüphanelerdeki non-public öğeler atlanmasın (anlamlı analiz için).
+
+-allowaccessmodification → ProGuard gerekli görürse erişim düzeylerini değiştirerek daha iyi küçültme yapabilsin.
+
+-overloadaggressively → Aynı sınıf içinde yöntem/alan adlarını daha agresif şekilde çakıştır (analizi zorlaştırır).
+
+-repackageclasses '' → Tüm sınıfları kök pakete taşı (paket yapısını bozarak iz sürmeyi zorlaştırır).
+
+-useuniqueclassmembernames → Üye adlarını benzersizleştir (repackage sonrası çakışmaları önler).
+
+-optimizationpasses 10 → Optimize geçişleri sayısı (daha fazla yineleme = daha fazla iyileştirme, nadiren kırılma riski).
+
+Metadata/attribute yönetimi
+
+-renamesourcefileattribute Source → SourceFile adını sabit bir değere çevirir (dosya izi saklanmaz).
+
+-keepattributes Exceptions,Signature → Gerekli minimum öznitelikleri korur (örn. generic tür imzaları).
+(Reflection/JSON framework’leri gerekiyorsa Annotation/InnerClasses gibi ekleyin.)
+
+Giriş noktaları / API
+
+-keep 'class ** { public static void main(java.lang.String[]); }' → main içeren sınıflar korunur (yeniden adlandırılmaz/atılmaz).
+(Kütüphane iseniz public API’leri paket bazında ek -keep ile koruyun.)
+
+Kaynak/Resource uyumu
+
+-adaptresourcefilenames / -adaptresourcefilecontents → Resource içindeki sınıf adlarını yeni adlara uyarlar (properties/XML kırılmasın).
+
+İsim sözlükleri (iz sürmeyi zorlaştırma)
+
+-obfuscationdictionary ... → Yöntem/alan adları için sözlük.
+
+-classobfuscationdictionary ... → Sınıf adları için sözlük.
+
+-packageobfuscationdictionary ... → Paket adları için sözlük.
+(Her build’te farklı sözlük kullanmak korelasyonu bozar.)
+
+Raporlama/analiz
+
+-printmapping build/mapping.txt → Eski↔Yeni ad eşlemesi (geri izleme).
+
+-printusage build/usage.txt → Atılan (kullanılmayan) sınıf/üyeler.
+
+-printseeds build/seeds.txt → Korunan (keep edilen) öğeler.
+
+-whyareyoukeeping 'class **' → Neden korunduğunu raporla (gereksiz keep’leri temizlemeye yarar).
+
+Not: ProGuard string şifrelemez; kritik sırları düz bırakmayın (kendiniz şifreleyin veya JNI’ye taşıyın).
+
+OMVLL/OLLVM (Clang/LLVM – C++) – Parametre Açıklamaları
+
+Optimizasyon & derleme temeli
+
+-O2 / -O3 → Kod optimizasyon seviyeleri (O3 daha agresif/hızlı, kimi zaman boyutu büyütebilir).
+
+-flto → Link-time optimization (modüller arası daha iyi optimizasyon, analiz zorluğu artar).
+
+-fPIC → Konumdan bağımsız kod (paylaşılan kütüphaneler için gereklidir).
+
+-fPIE + -pie → Yürütülebilir dosyayı PIE yapar (ASLR ile bellek yerleşimi rastgeleleşir).
+
+Sembol görünürlüğü & bölümleme
+
+-fvisibility=hidden → Varsayılan sembolleri gizle (yalnızca açıkça işaretlenenler dışa görünür).
+
+-ffunction-sections -fdata-sections → Her fonksiyon/veriyi kendi bölümüne koyar.
+
+-Wl,--gc-sections → Kullanılmayan bölümleri link aşamasında çöpe at (boyut+analiz yüzeyi düşer).
+
+Linker sertleştirmeleri
+
+-Wl,-z,relro → RELRO (yeniden yerleştirme bölümleri salt-okunur).
+
+-Wl,-z,now → Gecikmeli bağlamayı kapat, PLT girişlerini baştan çöz (ROP yüzeyi azalır).
+
+-Wl,-z,noexecstack → Yığın yürütülemez (NX).
+
+OMVLL/OLLVM obfuscation pass’leri (LLVM’e iletilir)
+
+-mllvm -fla → Control-Flow Flattening (akış düzleştirme; CFG’yi zorlaştırır).
+
+-mllvm -bcf → Bogus Control Flow (sahte akış ekler).
+
+-mllvm -sub → Instruction Substitution (talimatları muadilleriyle değiştirir).
+
+-mllvm -split → Basic-block split (blokları bölüp akışı karmaşıklaştırır).
+
+-mllvm -bcf_prob=75 → BCF uygulanma olasılığı %75 (şiddet ayarı; sürüme göre isim değişebilir).
+
+Ön-işlemci/simge
+
+-D OBFUSCATE_STRINGS=1 → Kodda koşullu derleme/basit string şifreleme makrolarını aktive etmek için örnek define.
+
+Dağıtım sonrası
+
+strip --strip-unneeded myapp → Gereksiz sembolleri at (ikili içgörüsünü azaltır).
+(Geliştirme için ayrık sembol dosyası saklayın.)
+
+Not: OMVLL/OLLVM pass isimleri sürümden sürüme farklı olabilir; kendi sürümünüzün eşdeğer anahtarlarını kullanın. Tüm hassas stringleri makro/şifreleme ile sarın; tek bir düz string bile geri mühendisliği kolaylaştırır.
